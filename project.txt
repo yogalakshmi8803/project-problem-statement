@@ -1,0 +1,93 @@
+Problem Statement
+
+Forecast Monthly Sales for a Retail Store using OOP and Machine Learning
+
+Design an object-oriented system to forecast monthly sales. The system should handle data loading, preprocessing, model training, and prediction. Use the following classes:
+
+DataLoader: Responsible for loading sales data from a file.
+Preprocessor: Handles data cleaning and feature engineering.
+SalesModel: Manages training and prediction using a machine learning model.
+SalesForecaster: Coordinates the entire forecasting process.
+
+Sample Code
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import numpy as np
+
+class DataLoader:
+    def __init__(self, file_path):
+        self.file_path = file_path
+
+    def load_data(self):
+        # Load the data from the file path
+        self.data = pd.read_csv(self.file_path)
+        return self.data
+
+class Preprocessor:
+    def __init__(self, data):
+        self.data = data
+
+    def clean_data(self):
+        # Convert Date column to datetime and sort data
+        self.data['Date'] = pd.to_datetime(self.data['Date'])
+        self.data = self.data.sort_values(by='Date')
+
+    def feature_engineering(self):
+        # Create new features (e.g., month and year)
+        self.data['Year'] = self.data['Date'].dt.year
+        self.data['Month'] = self.data['Date'].dt.month
+        self.data = self.data.drop(columns=['Date'])
+
+class SalesModel:
+    def __init__(self):
+        self.model = LinearRegression()
+
+    def train_model(self, X_train, y_train):
+        self.model.fit(X_train, y_train)
+
+    def predict_sales(self, X_test):
+        return self.model.predict(X_test)
+
+class SalesForecaster:
+    def __init__(self, file_path):
+        self.data_loader = DataLoader(file_path)
+        self.preprocessor = None
+        self.sales_model = SalesModel()
+
+    def run_forecasting(self):
+        # Load and preprocess data
+        data = self.data_loader.load_data()
+        self.preprocessor = Preprocessor(data)
+        self.preprocessor.clean_data()
+        self.preprocessor.feature_engineering()
+
+        # Prepare data for training
+        X = self.preprocessor.data[['Year', 'Month']]
+        y = self.preprocessor.data['Sales']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+        # Train model and make predictions
+        self.sales_model.train_model(X_train, y_train)
+        predictions = self.sales_model.predict_sales(X_test)
+
+        # Evaluate the model
+        mse = mean_squared_error(y_test, predictions)
+        print(f'Mean Squared Error: {mse}')
+
+        # Forecast future sales
+        future_dates = pd.date_range(start='2024-01-01', periods=12, freq='M')
+        future_data = pd.DataFrame({
+            'Year': future_dates.year,
+            'Month': future_dates.month
+        })
+        future_sales = self.sales_model.predict_sales(future_data)
+        return future_sales
+
+# Example usage:
+file_path = 'sales_data.csv'  # Path to your sales data file
+forecaster = SalesForecaster(file_path)
+future_sales = forecaster.run_forecasting()
+print('Forecasted Sales for the next 12 months:', future_sales)
